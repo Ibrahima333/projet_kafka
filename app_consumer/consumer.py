@@ -16,7 +16,6 @@ st.title("Résultats en direct — Quiz Kafka")
 
 st.info("Affichage en direct des réponses reçues via Kafka...")
 
-@st.cache_resource(show_spinner=False)
 def get_consumer():
 	try:
 		return KafkaConsumer(
