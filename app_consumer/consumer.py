@@ -5,8 +5,11 @@ import os
 import time
 from collections import defaultdict
 
-KAFKA_BROKER = "d7dr83mgq0q78n6tjdvg.any.eu-west-2.mpx.prd.cloud.redpanda.com:9092"
-KAFKA_TOPIC = "quiz-reponses"
+KAFKA_BROKER = os.getenv("KAFKA_BROKER", "d7dr83mgq0q78n6tjdvg.any.eu-west-2.mpx.prd.cloud.redpanda.com:9092")
+KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "quiz-reponses")
+
+KAFKA_USERNAME = os.getenv("KAFKA_USERNAME", "kafka")
+KAFKA_PASSWORD = os.getenv("KAFKA_PASSWORD", "uXoYCCvqPLeD8ZOq7jQFUDawQaJwaT")
 
 st.set_page_config(page_title="Résultats Quiz Kafka", page_icon="📊", layout="centered")
 st.title("Résultats en direct — Quiz Kafka")
@@ -21,15 +24,16 @@ def get_consumer():
             bootstrap_servers=[KAFKA_BROKER],
             security_protocol="SASL_SSL",
             sasl_mechanism="SCRAM-SHA-256",
-            sasl_plain_username="kafka",
-            sasl_plain_password="uXoYCCvqPLeD8ZOq7jQFUDawQaJwaT",
+            sasl_plain_username=KAFKA_USERNAME,
+            sasl_plain_password=KAFKA_PASSWORD,
             value_deserializer=lambda v: json.loads(v.decode("utf-8")),
             key_deserializer=lambda k: k.decode("utf-8") if k else None,
             # Comportement
             auto_offset_reset="latest",
             enable_auto_commit=True,
             group_id="streamlit-result-viewer",
-            # ✅ Ajouts recommandés
+			
+            # Ajouts recommandés
             session_timeout_ms=30000,
             request_timeout_ms=40000,
             consumer_timeout_ms=5000,   # évite un blocage infini si pas de message

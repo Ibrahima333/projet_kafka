@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: kafka-producer
+    runtime: python
+    rootDir: producer
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run producer.py --server.port $PORT --server.address 0.0.0.0
+    envVars:
+      - key: KAFKA_BROKER
+        sync: false
+      - key: KAFKA_USERNAME
+        sync: false
+      - key: KAFKA_PASSWORD
+        sync: false
+      - key: KAFKA_TOPIC
+        sync: false
+
+  - type: web
+    name: kafka-consumer
+    runtime: python
+    rootDir: consumer
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run consumer.py --server.port $PORT --server.address 0.0.0.0
+    envVars:
+      - key: KAFKA_BROKER
+        sync: false
+      - key: KAFKA_USERNAME
+        sync: false
+      - key: KAFKA_PASSWORD
+        sync: false
+      - key: KAFKA_TOPIC
+        sync: false

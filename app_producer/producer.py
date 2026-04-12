@@ -8,8 +8,11 @@ from kafka import KafkaProducer
 
 # Config
 TRIVIA_API_URL = "https://the-trivia-api.com/v2/questions"
-KAFKA_BROKER = "d7dr83mgq0q78n6tjdvg.any.eu-west-2.mpx.prd.cloud.redpanda.com:9092"
-KAFKA_TOPIC = "quiz-reponses"
+KAFKA_BROKER = os.getenv("KAFKA_BROKER", "d7dr83mgq0q78n6tjdvg.any.eu-west-2.mpx.prd.cloud.redpanda.com:9092")
+KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "quiz-reponses")
+
+KAFKA_USERNAME = os.getenv("KAFKA_USERNAME", "kafka")
+KAFKA_PASSWORD = os.getenv("KAFKA_PASSWORD", "uXoYCCvqPLeD8ZOq7jQFUDawQaJwaT")
 
 CATEGORIES = {
     "🌍 Toutes": None,
@@ -35,8 +38,8 @@ def get_producer():
             bootstrap_servers=[KAFKA_BROKER],
             security_protocol="SASL_SSL",
             sasl_mechanism="SCRAM-SHA-256",
-            sasl_plain_username="kafka",
-            sasl_plain_password="uXoYCCvqPLeD8ZOq7jQFUDawQaJwaT",
+            sasl_plain_username=KAFKA_USERNAME,
+            sasl_plain_password=KAFKA_PASSWORD,
             value_serializer=lambda v: json.dumps(v).encode("utf-8"),
             key_serializer=lambda k: k.encode("utf-8"),
         )
