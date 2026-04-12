@@ -14,7 +14,7 @@ KAFKA_PASSWORD = os.getenv("KAFKA_PASSWORD", "uXoYCCvqPLeD8ZOq7jQFUDawQaJwaT")
 st.set_page_config(page_title="Résultats Quiz Kafka", page_icon="📊", layout="centered")
 st.title("Résultats en direct — Quiz Kafka")
 
-st.info("Affichage en direct des réponses reçues via Kafka. Ouvre cette page pendant que le quiz est en cours.")
+st.info("Affichage en direct des réponses reçues via Kafka...")
 
 @st.cache_resource(show_spinner=False)
 def get_consumer():
@@ -54,14 +54,19 @@ total_questions = defaultdict(int)
 messages = []
 
 while True:
-	for msg in consumer.poll(timeout_ms=8000, max_records=10).values():
+	polled = consumer.poll(timeout_ms=8000, max_records=10)
+	received = False
+	for msg in polled.values():
 		for record in msg:
+			received = True
 			m = record.value
 			messages.append(m)
 			user = m.get("utilisateur", "Inconnu")
 			if m.get("reponse_choisie") == m.get("bonne_reponse"):
 				scores[user] += 1
 			total_questions[user] += 1
+	if not received:
+		st.warning("Aucune réponse reçue du serveur Kafka. Vérifiez la connexion ou l'activité du producteur.")
 	if total_questions:
 		with score_placeholder.container():
 			st.subheader("Scores en direct :")
