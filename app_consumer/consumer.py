@@ -16,31 +16,35 @@ st.title("Résultats en direct — Quiz Kafka")
 
 st.info("Affichage en direct des réponses reçues via Kafka...")
 
+from kafka import TopicPartition
+
 def get_consumer():
-	try:
-		return KafkaConsumer(
-			KAFKA_TOPIC,
-			bootstrap_servers=[KAFKA_BROKER],
-			security_protocol="SASL_SSL",
-			sasl_mechanism="SCRAM-SHA-256",
-			sasl_plain_username=KAFKA_USERNAME,
-			sasl_plain_password=KAFKA_PASSWORD,
-			value_deserializer=lambda v: json.loads(v.decode("utf-8")),
-			key_deserializer=lambda k: k.decode("utf-8") if k else None,
-			# Comportement
-			auto_offset_reset="earliest",
-			enable_auto_commit=True,
-			group_id="streamlit-result-viewer",
-			session_timeout_ms=120000,
-			request_timeout_ms=180000
-		
-		)
-	except Exception as e:
-		st.error(f"Kafka non connecté : {e}")
-		return None
+    try:
+        consumer = KafkaConsumer(
+            bootstrap_servers=[KAFKA_BROKER],
+            security_protocol="SASL_SSL",
+            sasl_mechanism="SCRAM-SHA-256",
+            sasl_plain_username=KAFKA_USERNAME,
+            sasl_plain_password=KAFKA_PASSWORD,
+            value_deserializer=lambda v: json.loads(v.decode("utf-8")),
+            key_deserializer=lambda k: k.decode("utf-8") if k else None,
+            enable_auto_commit=False,   # ← ne pas sauvegarder l'offset
+            session_timeout_ms=30000,
+            request_timeout_ms=40000,
+        )
+        
+        # Assigner manuellement et repartir du début
+        partitions = consumer.partitions_for_topic(KAFKA_TOPIC)
+        topic_partitions = [TopicPartition(KAFKA_TOPIC, p) for p in partitions]
+        consumer.assign(topic_partitions)
+        consumer.seek_to_beginning(*topic_partitions)
+        
+        return consumer
+    except Exception as e:
+        st.error(f"Kafka non connecté : {e}")
+        return None
 
 consumer = get_consumer()
-
 if not consumer:
 	st.stop()
 
