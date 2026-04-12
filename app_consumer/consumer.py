@@ -1,25 +1,25 @@
 import streamlit as st
-from kafka import KafkaConsumer
-import json
-import os
-import time
+from kafka import KafkaConsumer, TopicPartition
+import json, os, time
 from collections import defaultdict
 
-KAFKA_BROKER = os.getenv("KAFKA_BROKER", "d7dr83mgq0q78n6tjdvg.any.eu-west-2.mpx.prd.cloud.redpanda.com:9092")
-KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "quiz-reponses")
+KAFKA_BROKER = os.getenv("KAFKA_BROKER")
+KAFKA_TOPIC = os.getenv("KAFKA_TOPIC")
+KAFKA_USERNAME = os.getenv("KAFKA_USERNAME")
+KAFKA_PASSWORD = os.getenv("KAFKA_PASSWORD")
 
-KAFKA_USERNAME = os.getenv("KAFKA_USERNAME", "kafka")
-KAFKA_PASSWORD = os.getenv("KAFKA_PASSWORD", "uXoYCCvqPLeD8ZOq7jQFUDawQaJwaT")
-
-st.set_page_config(page_title="Résultats Quiz Kafka", page_icon="📊", layout="centered")
+st.set_page_config(page_title="Résultats Quiz", page_icon="📊", layout="centered")
 st.title("Résultats en direct — Quiz Kafka")
 
-st.info("Affichage en direct des réponses reçues via Kafka...")
+# Initialiser la session
+if "scores" not in st.session_state:
+    st.session_state.scores = defaultdict(int)
+if "totals" not in st.session_state:
+    st.session_state.totals = defaultdict(int)
 
 def get_consumer():
     try:
         consumer = KafkaConsumer(
-            KAFKA_TOPIC,
             bootstrap_servers=[KAFKA_BROKER],
             security_protocol="SASL_SSL",
             sasl_mechanism="SCRAM-SHA-256",
@@ -27,53 +27,42 @@ def get_consumer():
             sasl_plain_password=KAFKA_PASSWORD,
             value_deserializer=lambda v: json.loads(v.decode("utf-8")),
             key_deserializer=lambda k: k.decode("utf-8") if k else None,
-            auto_offset_reset="latest",   # ← seulement les nouveaux messages
-            enable_auto_commit=True,       # ← sauvegarde la position
-            group_id="streamlit-live",
+            enable_auto_commit=False,
             session_timeout_ms=30000,
             request_timeout_ms=40000,
         )
+        partitions = consumer.partitions_for_topic(KAFKA_TOPIC)
+        tps = [TopicPartition(KAFKA_TOPIC, p) for p in partitions]
+        consumer.assign(tps)
+        consumer.seek_to_end(*tps)  # ← seulement les nouveaux messages
         return consumer
     except Exception as e:
         st.error(f"Kafka non connecté : {e}")
         return None
 
+# Poll une seule fois par rerun
 consumer = get_consumer()
+if consumer:
+    polled = consumer.poll(timeout_ms=3000, max_records=50)
+    for msgs in polled.values():
+        for record in msgs:
+            m = record.value
+            user = m.get("utilisateur", "Inconnu")
+            st.session_state.totals[user] += 1
+            if m.get("reponse_choisie") == m.get("bonne_reponse"):
+                st.session_state.scores[user] += 1
+    consumer.close()
 
-if not consumer:
-	st.stop()
+# Affichage
+if st.session_state.totals:
+    st.subheader("Scores en direct :")
+    for user, total in st.session_state.totals.items():
+        score = st.session_state.scores[user]
+        st.write(f"**{user}** : {score} / {total}")
+        st.progress(score / total if total else 0, text=f"{user} : {score} / {total}")
+else:
+    st.info("En attente de réponses...")
 
-
-
-score_placeholder = st.empty()
-progress_placeholder = st.empty()
-scores = defaultdict(int)
-total_questions = defaultdict(int)
-messages = []
-
-while True:
-	polled = consumer.poll(timeout_ms=20000, max_records=10)
-	st.write(f"Partitions polled: {len(polled)} — Records: {sum(len(v) for v in polled.values())}")
-	received = False
-	for msg in polled.values():
-		for record in msg:
-			received = True
-			m = record.value
-			messages.append(m)
-			user = m.get("utilisateur", "Inconnu")
-			if m.get("reponse_choisie") == m.get("bonne_reponse"):
-				scores[user] += 1
-			total_questions[user] += 1
-	if not received:
-		st.warning("Aucune réponse reçue du serveur Kafka. Vérifiez la connexion ou l'activité du producteur.")
-	if total_questions:
-		with score_placeholder.container():
-			st.subheader("Scores en direct :")
-			for user, score in scores.items():
-				st.write(f"**{user}** : {score} / {total_questions[user]}")
-		with progress_placeholder.container():
-			st.subheader("Progression :")
-			for user, total in total_questions.items():
-				user_score = scores[user]
-				st.progress(user_score / total if total else 0, text=f"{user} : {user_score} / {total}")
-	time.sleep(2)
+# Rafraîchir toutes les 3 secondes
+time.sleep(3)
+st.rerun()
