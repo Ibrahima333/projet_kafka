@@ -3,10 +3,10 @@ from kafka import KafkaConsumer, TopicPartition
 import json, os, time
 from collections import defaultdict
 
-KAFKA_BROKER = os.getenv("KAFKA_BROKER")
-KAFKA_TOPIC = os.getenv("KAFKA_TOPIC")
-KAFKA_USERNAME = os.getenv("KAFKA_USERNAME")
-KAFKA_PASSWORD = os.getenv("KAFKA_PASSWORD")
+KAFKA_BROKER   = os.getenv("KAFKA_BROKER", "d7dr83mgq0q78n6tjdvg.any.eu-west-2.mpx.prd.cloud.redpanda.com:9092")
+KAFKA_TOPIC    = os.getenv("KAFKA_TOPIC", "quiz-reponses")
+KAFKA_USERNAME = os.getenv("KAFKA_USERNAME", "kafka")
+KAFKA_PASSWORD = os.getenv("KAFKA_PASSWORD", "uXoYCCvqPLeD8ZOq7jQFUDawQaJwaT")
 
 st.set_page_config(page_title="Résultats Quiz", page_icon="📊", layout="centered")
 st.title("Résultats en direct — Quiz Kafka")
