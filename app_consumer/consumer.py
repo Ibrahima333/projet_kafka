@@ -54,7 +54,7 @@ total_questions = defaultdict(int)
 messages = []
 
 while True:
-	polled = consumer.poll(timeout_ms=1000, max_records=10)
+	polled = consumer.poll(timeout_ms=20000, max_records=10)
 	received = False
 	for msg in polled.values():
 		for record in msg:
