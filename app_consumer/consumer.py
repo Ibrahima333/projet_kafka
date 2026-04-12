@@ -18,25 +18,27 @@ st.info("Affichage en direct des réponses reçues via Kafka. Ouvre cette page p
 
 @st.cache_resource(show_spinner=False)
 def get_consumer():
-    try:
-        return KafkaConsumer(
-            KAFKA_TOPIC,
-            bootstrap_servers=[KAFKA_BROKER],
-            security_protocol="SASL_SSL",
-            sasl_mechanism="SCRAM-SHA-256",
-            sasl_plain_username=KAFKA_USERNAME,
-            sasl_plain_password=KAFKA_PASSWORD,
-            value_deserializer=lambda v: json.loads(v.decode("utf-8")),
-            key_deserializer=lambda k: k.decode("utf-8") if k else None,
-            # Comportement
-            auto_offset_reset="latest",
-            enable_auto_commit=True,
-            group_id="streamlit-result-viewer",
-			
-        )
-    except Exception as e:
-        st.error(f"Kafka non connecté : {e}")
-        return None
+	try:
+		return KafkaConsumer(
+			KAFKA_TOPIC,
+			bootstrap_servers=[KAFKA_BROKER],
+			security_protocol="SASL_SSL",
+			sasl_mechanism="SCRAM-SHA-256",
+			sasl_plain_username=KAFKA_USERNAME,
+			sasl_plain_password=KAFKA_PASSWORD,
+			value_deserializer=lambda v: json.loads(v.decode("utf-8")),
+			key_deserializer=lambda k: k.decode("utf-8") if k else None,
+			# Comportement
+			auto_offset_reset="latest",
+			enable_auto_commit=True,
+			group_id="streamlit-result-viewer",
+			session_timeout_ms=120000,
+			request_timeout_ms=180000,
+			consumer_timeout_ms=60000,   # délai augmenté pour Render
+		)
+	except Exception as e:
+		st.error(f"Kafka non connecté : {e}")
+		return None
 
 consumer = get_consumer()
 
