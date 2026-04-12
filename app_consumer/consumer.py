@@ -32,8 +32,8 @@ def get_consumer():
 			enable_auto_commit=True,
 			group_id="streamlit-result-viewer",
 			session_timeout_ms=120000,
-			request_timeout_ms=180000,
-			consumer_timeout_ms=60000,   # délai augmenté pour Render
+			request_timeout_ms=180000
+		
 		)
 	except Exception as e:
 		st.error(f"Kafka non connecté : {e}")
@@ -54,6 +54,7 @@ messages = []
 
 while True:
 	polled = consumer.poll(timeout_ms=20000, max_records=10)
+	st.write(f"Partitions polled: {len(polled)} — Records: {sum(len(v) for v in polled.values())}")
 	received = False
 	for msg in polled.values():
 		for record in msg:
