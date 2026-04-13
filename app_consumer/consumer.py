@@ -19,7 +19,8 @@ if "totals" not in st.session_state:
 
 def get_consumer():
     try:
-        consumer = KafkaConsumer(
+        return KafkaConsumer(
+            KAFKA_TOPIC,                          # ← topic directement ici
             bootstrap_servers=[KAFKA_BROKER],
             security_protocol="SASL_SSL",
             sasl_mechanism="SCRAM-SHA-256",
@@ -27,23 +28,19 @@ def get_consumer():
             sasl_plain_password=KAFKA_PASSWORD,
             value_deserializer=lambda v: json.loads(v.decode("utf-8")),
             key_deserializer=lambda k: k.decode("utf-8") if k else None,
-            enable_auto_commit=False,
+            auto_offset_reset="latest",           # ← se positionne à la fin automatiquement
+            enable_auto_commit=True,              # ← sauvegarde la position automatiquement
+            group_id="streamlit-viewer-live2",
             session_timeout_ms=30000,
             request_timeout_ms=40000,
         )
-        partitions = consumer.partitions_for_topic(KAFKA_TOPIC)
-        tps = [TopicPartition(KAFKA_TOPIC, p) for p in partitions]
-        consumer.assign(tps)
-        consumer.seek_to_end(*tps)  # ← seulement les nouveaux messages
-        return consumer
     except Exception as e:
         st.error(f"Kafka non connecté : {e}")
         return None
-
 # Poll une seule fois par rerun
 consumer = get_consumer()
 if consumer:
-    polled = consumer.poll(timeout_ms=3000, max_records=50)
+    polled = consumer.poll(timeout_ms=6000, max_records=50)
     for msgs in polled.values():
         for record in msgs:
             m = record.value
@@ -52,6 +49,8 @@ if consumer:
             if m.get("reponse_choisie") == m.get("bonne_reponse"):
                 st.session_state.scores[user] += 1
     consumer.close()
+else:
+    st.warning("Impossible de se connecter à Kafka. Vérifiez les paramètres et réessayez.")
 
 # Affichage
 if st.session_state.totals:
