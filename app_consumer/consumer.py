@@ -40,7 +40,7 @@ def get_consumer():
 # Poll une seule fois par rerun
 consumer = get_consumer()
 if consumer:
-    polled = consumer.poll(timeout_ms=6000, max_records=50)
+    polled = consumer.poll(timeout_ms=1000, max_records=50)
     for msgs in polled.values():
         for record in msgs:
             m = record.value
@@ -63,5 +63,5 @@ else:
     st.info("En attente de réponses...")
 
 # Rafraîchir toutes les 3 secondes
-time.sleep(3)
+time.sleep(1)
 st.rerun()
